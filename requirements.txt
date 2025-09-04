@@ -1,4 +1,5 @@
 streamlit
-duckdb
+duckdb==1.3.2
 pandas
 numpy
+
