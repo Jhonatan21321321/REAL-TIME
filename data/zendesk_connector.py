@@ -6,7 +6,7 @@ def fetch_tickets(minutes_back=0):
     """Busca tickets com offset automático de 180 minutos"""
     try:
         now = datetime.utcnow()
-        
+         
         # Ajuste automático: adiciona 180 minutos ao valor recebido
         start_time = now - timedelta(minutes=minutes_back + 180)
         
