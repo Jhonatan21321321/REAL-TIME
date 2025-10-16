@@ -1,7 +1,7 @@
 import streamlit as st
 import requests
-from datetime import datetime, timedelta
- 
+from datetime import datetime
+
 # configuração
 EMAIL = 'jhonatan.cruz@superbet.com'
 TOKEN = 'd6FQc8anTNI0RHbn0lMvWePn03LKB87uKshEJdqi'
@@ -10,14 +10,10 @@ SUBDOMAIN = 'superbetbr'
 st.set_page_config(page_title="Zendesk Tickets", layout="wide")
 st.title("🎫 Tickets Abertos - Zendesk")
 
-# selecionar intervalo em minutos
-intervalo = st.slider("Intervalo em minutos:", 40, 240, 180)
+# timestamp atual (sem ajuste)
+since_timestamp = int(datetime.utcnow().timestamp())
 
-# calcular timestamp
-since_time = datetime.utcnow() - timedelta(minutes=intervalo) - timedelta(minutes=1)
-since_timestamp = int(since_time.timestamp())
-
-# url da API incremental
+# URL da API incremental (tickets abertos)
 url = f"https://{SUBDOMAIN}.zendesk.com/api/v2/incremental/tickets.json?start_time={since_timestamp}&status=open"
 
 # autenticação
@@ -30,7 +26,7 @@ try:
     data = resp.json()
     tickets = data.get("tickets", [])
 
-    st.success(f"Encontrados {len(tickets)} tickets abertos nos últimos {intervalo} minutos")
+    st.success(f"Encontrados {len(tickets)} tickets abertos desde {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} (UTC)")
 
     if tickets:
         for t in tickets:
@@ -39,7 +35,7 @@ try:
                 st.write(f"**Status:** {t['status']}")
                 st.write(f"**Atualizado em:** {t['updated_at']}")
                 st.write(f"**Criado em:** {t['created_at']}")
-                st.json(t)  # opcional: mostra todos os dados brutos
+                st.json(t)  # mostra todos os dados brutos (opcional)
 
 except Exception as e:
     st.error(f"Erro ao buscar tickets: {e}")
