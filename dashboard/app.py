@@ -39,7 +39,7 @@ def calculate_time_differences(df):
 
     def format_timedelta(td):
         # Remove 3 horas do timedelta
-        td = td - pd.Timedelta(hours=3)
+        td = td - pd.Timedelta(hours=0)
         # Se negativo, retorna 00:00:00
         if td.total_seconds() < 0:
             return "00:00:00"
