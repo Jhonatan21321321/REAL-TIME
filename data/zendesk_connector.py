@@ -3,17 +3,14 @@ from datetime import datetime, timedelta
 from config import AUTH, BASE_URL
 
 def fetch_tickets(minutes_back=0):
-    """Busca tickets com offset automático de 180 minutos"""
+    """Busca tickets com base no tempo informado, sem ajuste adicional"""
     try:
         now = datetime.utcnow()
-         
-        # Ajuste automático: adiciona 180 minutos ao valor recebido
-        start_time = now - timedelta(minutes=minutes_back )
+        start_time = now - timedelta(minutes=minutes_back)
         
         # DEBUG - verifique no terminal
         print(f"⏰ Horário REAL da busca: {start_time} (UTC)")
         print(f"📊 Minutos solicitados pelo usuário: {minutes_back}")
-        print(f"🔧 Offset aplicado: 180 minutos")
         
         start_timestamp = int(start_time.timestamp())
         
