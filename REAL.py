@@ -1,7 +1,7 @@
 import streamlit as st
 import requests
 from datetime import datetime, timedelta
-
+ 
 # configuração
 EMAIL = 'jhonatan.cruz@superbet.com'
 TOKEN = 'd6FQc8anTNI0RHbn0lMvWePn03LKB87uKshEJdqi'
