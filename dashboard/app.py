@@ -5,6 +5,7 @@ import pandas as pd
 from datetime import datetime
 from pytz import timezone
 import time
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from data.data_processor import process_zendesk_data
@@ -29,8 +30,6 @@ def load_data(minutes_back=5):
         df['updated_at'] = pd.to_datetime(df['updated_at'], errors='coerce')
     
     return df
-
-# ...existing code...
 
 def calculate_time_differences(df):
     """Calcula os tempos desde criação e atualização em tempo real (HH:MM:SS e -3h)"""
@@ -65,10 +64,8 @@ def calculate_time_differences(df):
 
     return df
 
-# ...existing code...
-
-def apply_filters(df, status_filter, via_channel_filter, assignee_groups_filter, satisfaction_filter, type_filter):
-    """Aplica os filtros selecionados ao DataFrame"""
+def apply_filters(df, status_filter, via_channel_filter, assignee_groups_filter,
+                  satisfaction_filter, sentiment_filter, type_filter):
     filtered_df = df.copy()
     
     if status_filter:
@@ -79,6 +76,8 @@ def apply_filters(df, status_filter, via_channel_filter, assignee_groups_filter,
         filtered_df = filtered_df[filtered_df['assignee_groups'].isin(assignee_groups_filter)]
     if satisfaction_filter:
         filtered_df = filtered_df[filtered_df['satisfaction_rating'].isin(satisfaction_filter)]
+    if sentiment_filter:
+        filtered_df = filtered_df[filtered_df['sentiment_5'].isin(sentiment_filter)]
     if type_filter:
         filtered_df = filtered_df[filtered_df['type'].isin(type_filter)]
     
@@ -98,7 +97,6 @@ def main():
         help="Define quantos minutos para trás os tickets serão buscados"
     )
 
-    # CORREÇÃO: Removida a adição dos 180 minutos
     df = load_data(minutes_back)
         
     # Botão de atualização
@@ -125,96 +123,99 @@ def main():
     # Filtros adicionais na sidebar
     st.sidebar.header("Filtros")
     
-    status_options = df['status'].unique().tolist()
+    status_options = df['status'].dropna().unique().tolist()
     selected_status = st.sidebar.multiselect(
         "Status",
-        options=status_options,
-        default=status_options
+        options=status_options
     )
     
-    via_channel_options = df['via_channel'].unique().tolist()
+    via_channel_options = df['via_channel'].dropna().unique().tolist()
     selected_via_channel = st.sidebar.multiselect(
         "via_channel",
-        options=via_channel_options,
-        default=via_channel_options
+        options=via_channel_options
     )
     
-    assignee_groups_options = df['assignee_groups'].unique().tolist()
+    assignee_groups_options = df['assignee_groups'].dropna().unique().tolist()
     selected_assignee_groups = st.sidebar.multiselect(
         "assignee_groups",
-        options=assignee_groups_options,
-        default=assignee_groups_options
+        options=assignee_groups_options
     )
     
     if 'satisfaction_rating' in df.columns:
         satisfaction_options = df['satisfaction_rating'].dropna().unique().tolist()
         selected_satisfaction = st.sidebar.multiselect(
             "Satisfaction Rating",
-            options=satisfaction_options,
-            default=satisfaction_options
+            options=satisfaction_options
         )
     else:
         selected_satisfaction = []
         st.sidebar.info("Coluna 'satisfaction_rating' não encontrada")
 
+    if 'sentiment_5' in df.columns:
+        sentiment_options = df['sentiment_5'].dropna().unique().tolist()
+        selected_sentiment = st.sidebar.multiselect(
+            "Sentiment",
+            options=sentiment_options
+        )
+    else:
+        selected_sentiment = []
+        st.sidebar.info("Coluna 'sentiment_5' não encontrada")
+
     if 'type' in df.columns:
         type_options = df['type'].dropna().unique().tolist()
         selected_type = st.sidebar.multiselect(
             "Type",
-            options=type_options,
-            default=type_options
+            options=type_options
         )
     else:
         selected_type = []
         st.sidebar.info("Coluna 'type' não encontrada")
-    
+
     filtered_df = apply_filters(
         df,
         selected_status,
         selected_via_channel,
         selected_assignee_groups,
         selected_satisfaction,
+        selected_sentiment,
         selected_type
     )
     
     # Reorganizar colunas para mostrar tempo_desde_* ao lado de assignee_name
+    cols = filtered_df.columns.tolist()
     if 'assignee_name' in filtered_df.columns:
-        # Encontrar a posição da coluna assignee_name
         cols = filtered_df.columns.tolist()
         assignee_idx = cols.index('assignee_name')
         
-        # Mover as colunas de tempo para depois de assignee_name
         time_cols = ['tempo_desde_criacao', 'tempo_desde_atualizacao']
-        for col in time_cols:
-            if col in cols:
-                cols.remove(col)
-                cols.insert(assignee_idx + 1, col)
-                assignee_idx += 1  # Atualizar a posição após inserção
+        for c in time_cols:
+            if c in cols:
+                cols.remove(c)
+                cols.insert(assignee_idx + 1, c)
+                assignee_idx += 1
         
         filtered_df = filtered_df[cols]
     
-    col1, col2, col3,col4,col5,col6 = st.columns(6)
+    col1, col2, col3, col4, col5, col6 = st.columns(6)
     with col1:
         st.metric("Total de Tickets", len(filtered_df))
     with col2:
         open_tickets = len(filtered_df[filtered_df['status'] == 'open'])
         st.metric("Tickets Abertos", open_tickets)
     with col3:
-        open_tickets = len(filtered_df[filtered_df['status'] == 'solved'])
-        st.metric("Tickets Resolvidos", open_tickets)
+        solved_tickets = len(filtered_df[filtered_df['status'] == 'solved'])
+        st.metric("Tickets Resolvidos", solved_tickets)
     with col4:
-        open_tickets = len(filtered_df[filtered_df['status'] == 'pending'])
-        st.metric("Tickets pending", open_tickets)
+        pending_tickets = len(filtered_df[filtered_df['status'] == 'pending'])
+        st.metric("Tickets pending", pending_tickets)
     with col5:
-        open_tickets = len(filtered_df[filtered_df['status'] == 'pending'])
-        st.metric("Tickets hold", open_tickets)
+        hold_tickets = len(filtered_df[filtered_df['status'] == 'hold']) if 'hold' in filtered_df['status'].unique() else 0
+        st.metric("Tickets hold", hold_tickets)
     with col6:
-        open_tickets = len(filtered_df[filtered_df['status'] == 'closed'])
-        st.metric("Tickets closed", open_tickets)
+        closed_tickets = len(filtered_df[filtered_df['status'] == 'closed'])
+        st.metric("Tickets closed", closed_tickets)
     
     st.subheader("Tickets Filtrados")
-    
-    # Placeholder para a tabela que será atualizada em tempo real
     table_placeholder = st.empty()
     
     st.subheader("Análise por Agentes Ativos")
@@ -223,13 +224,13 @@ def main():
         resultado = conn.execute("""
             SELECT
                 DATEDIFF('hour', STRPTIME(MAX(assignee_last_login_at), '%Y-%m-%d %H:%M:%S'), CURRENT_TIMESTAMP) AS horas_trabalhadas,
-                 assignee_name, 
+                assignee_name, 
                 status,
                 COUNT(*) AS total
             FROM filtered_df
             GROUP BY assignee_name, status
         """).fetchdf()
-        st.dataframe(resultado)
+        st.dataframe(resultado, use_container_width=True)
         
     st.subheader("Análise por Channel")
     with duckdb.connect(':memory:') as conn:
@@ -240,48 +241,36 @@ def main():
                 status,
                 COUNT(*) AS total
             FROM filtered_df
-            GROUP BY  via_channel,status
-            order by via_channel
+            GROUP BY via_channel, status
+            ORDER BY via_channel
         """).fetchdf()
-        st.dataframe(resultado)
+        st.dataframe(resultado, use_container_width=True)
         
-        st.subheader("Análise por Group")
+    st.subheader("Análise por Group")
     with duckdb.connect(':memory:') as conn:
         conn.register('filtered_df', filtered_df)
         resultado = conn.execute("""
-     SELECT
-    CASE 
-        WHEN assignee_groups LIKE '%T1%' THEN 'T1'
-        WHEN assignee_groups LIKE '%T2%' THEN 'T2'
-        ELSE 'OTHER'
-    END AS grp,
-    status,
-    COUNT(*) AS total
-FROM filtered_df
-GROUP BY grp, status
-ORDER BY grp;
-
+            SELECT
+                CASE 
+                    WHEN assignee_groups LIKE '%T1%' THEN 'T1'
+                    WHEN assignee_groups LIKE '%T2%' THEN 'T2'
+                    ELSE 'OTHER'
+                END AS grp,
+                status,
+                COUNT(*) AS total
+            FROM filtered_df
+            GROUP BY grp, status
+            ORDER BY grp
         """).fetchdf()
-        st.dataframe(resultado)
+        st.dataframe(resultado, use_container_width=True)
         
-    
-    
-    # Atualizar a tabela em tempo real
+    # Atualizar a tabela em "tempo real"
     while True:
-        # Recalcular os tempos
         updated_df = calculate_time_differences(filtered_df)
-        
-        # Manter a mesma ordem de colunas
         if 'assignee_name' in updated_df.columns:
             updated_df = updated_df[cols]
-        
-        # Exibir a tabela atualizada
         table_placeholder.dataframe(updated_df, use_container_width=True)
-        
-        # Aguardar 60 segundos antes da próxima atualização
         time.sleep(1)
-    
- 
 
 if __name__ == "__main__":
     main()
