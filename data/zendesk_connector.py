@@ -8,7 +8,7 @@ def fetch_tickets(minutes_back=0):
         now = datetime.utcnow()
          
         # Ajuste automático: adiciona 180 minutos ao valor recebido
-        start_time = now - timedelta(minutes=minutes_back + 180)
+        start_time = now - timedelta(minutes=minutes_back )
         
         # DEBUG - verifique no terminal
         print(f"⏰ Horário REAL da busca: {start_time} (UTC)")
